@@ -1,0 +1,77 @@
+{
+  "theme": "DARK",
+  "archetype": "Archetype 2: The Performance Pro",
+  "domain": "Fitness & Nutrition Tracking",
+  "typography": {
+    "heading_font": "Bebas Neue",
+    "body_font": "Manrope",
+    "hierarchy": {
+      "h1_display": "text-5xl tracking-tighter uppercase (approx 48px, use Bebas Neue)",
+      "h2_section": "text-3xl tracking-tight uppercase (approx 30px, use Bebas Neue)",
+      "h3_card": "text-xl tracking-tight uppercase (approx 20px, use Bebas Neue)",
+      "body_main": "text-base tracking-normal (approx 16px, use Manrope)",
+      "body_small": "text-sm text-secondary (approx 14px, use Manrope)",
+      "overline": "text-xs tracking-[0.2em] uppercase text-secondary (use Manrope)"
+    }
+  },
+  "colors": {
+    "background": "#0A0A0A",
+    "surface": "#171717",
+    "surface_highlight": "#262626",
+    "primary_workout": "#FF3B30",
+    "primary_nutrition": "#007AFF",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#A3A3A3",
+    "border": "#262626",
+    "success": "#34C759",
+    "warning": "#FF9F0A"
+  },
+  "spacing_and_layout": {
+    "screen_padding": "px-6 py-4",
+    "card_padding": "p-5",
+    "gap_small": "gap-2",
+    "gap_medium": "gap-4",
+    "gap_large": "gap-6",
+    "gap_section": "gap-8"
+  },
+  "component_rules": {
+    "cards": "Flat background (#171717), 1px solid border (#262626), rounded-lg (8px). NO drop shadows. Tactical minimalism. Use generous internal padding.",
+    "buttons": "Solid primary color (#FF3B30 or #007AFF depending on context), rounded-md (6px), centered bold text (Manrope or Bebas Neue). High contrast active states.",
+    "inputs": "Background #0A0A0A, border #262626, text #FFFFFF. Active state border turns primary color. rounded-md.",
+    "navigation_tabs": "Bottom tab navigator with #0A0A0A background, top border #262626. Inactive icons #A3A3A3, active icons #FFFFFF or primary context color.",
+    "charts": "Use react-native-chart-kit. Transparent background. Use primary_workout (#FF3B30) for workout metrics and primary_nutrition (#007AFF) for nutrition metrics. Text #A3A3A3.",
+    "badges": "Small pills (rounded-full), uppercase overline text, bordered or subtly tinted background (e.g., bg-primary_workout/10 border-primary_workout)."
+  },
+  "image_urls": [
+    {
+      "category": "onboarding_hero",
+      "url": "https://images.unsplash.com/photo-1603665409265-bdc00027c217?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1Mjh8MHwxfHNlYXJjaHwxfHxneW0lMjB0cmFpbmluZyUyMGRhcmt8ZW58MHx8fHwxNzc3MzEzMTQ3fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Red and black dumbbell on black floor, dark gym atmosphere for welcome/onboarding screen."
+    },
+    {
+      "category": "nutrition_placeholder",
+      "url": "https://images.pexels.com/photos/1640775/pexels-photo-1640775.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Colorful healthy meal prep in containers. Use as a placeholder for the meal scanning AI feature."
+    },
+    {
+      "category": "fridge_placeholder",
+      "url": "https://images.pexels.com/photos/5146918/pexels-photo-5146918.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Woman reaching into an open fridge. Use as placeholder/background for fridge scan AI feature."
+    }
+  ],
+  "accessibility_and_motion": {
+    "contrast": "Text contrast strictly follows APCA. Primary text is #FFFFFF on #0A0A0A (high contrast).",
+    "motion": "Use React Native Reanimated or LayoutAnimation for smooth list insertions and active state transitions.",
+    "test_attributes": "CRITICAL: All interactive and key informational elements MUST include `testID` attribute (React Native equivalent of data-testid). Format: kebab-case, role-based."
+  },
+  "instructions_to_main_agent": [
+    "This is an Expo React Native app. Apply the styling guidelines using standard StyleSheet or NativeWind. The class names provided in spacing_and_layout are Tailwind standards; translate them if using pure StyleSheet.",
+    "Install and use `@expo-google-fonts/bebas-neue` and `@expo-google-fonts/manrope`. Bebas Neue is strictly for H1/H2/H3 and big numeric data points. Manrope is for body, labels, inputs, and buttons.",
+    "Use `lucide-react-native` for all icons. Avoid generic emojis.",
+    "Wrap all main screens in `SafeAreaView` from `react-native-safe-area-context` to ensure proper spacing on devices.",
+    "Maintain the DARK 'Performance Pro' archetype. Do not use white backgrounds for screens. Deliver a tactical, dense card-based UI with thin 1px borders.",
+    "Use the `testID` attribute for all interactive elements instead of `data-testid` (since this is React Native). Example: <TouchableOpacity testID='login-submit-button'>",
+    "For charts, install `react-native-chart-kit` and customize the theme to match the dark color palette rather than using its defaults.",
+    "Always rely on the `image_urls` provided in this JSON for media placeholders. Do not use generic dummyimage/placehold URLs."
+  ]
+}
