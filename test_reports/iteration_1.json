@@ -1,0 +1,50 @@
+{
+  "summary": "FitFlow AI backend + frontend validated against public preview URL. Backend: 17/21 pytest tests pass (81%). All 4 failures share a single root cause: naive vs aware datetime comparison in /app/backend/streak_utils.py:59 and /app/backend/server.py:111 (MongoDB returns tz-naive datetimes, code compares with tz-aware utcnow). This bug breaks GET /api/streak (500), POST /api/workout/session (500 — calls update_weekly_streak), data-isolation test (depends on session creation), and brute-force lockout (returns 500 instead of 429 after 5 failed logins because locked_until is stored naive and compared to aware utcnow). AI endpoints (scan-meal, scan-fridge, meal-suggestions), auth, profile, nutrition, plan, exercises, ranking, meals are all green. Frontend web preview loads fine on mobile viewport, landing + login + dashboard render correctly with disclaimers, but bottom tab buttons lack testIDs and dashboard 'CURRENT PLAN' card shows 'No plan' for demo user because the /streak 500 rejects Promise.all in dashboard load() (no .catch on /streak call).",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "GET /api/streak", "issue": "500 TypeError: can't compare offset-naive and offset-aware datetimes at streak_utils.py:59 (`last_eval < prev_start`). Fix: make `last_eval` tz-aware when read from Mongo, or initialize AsyncIOMotorClient with tz_aware=True.", "priority": "CRITICAL"},
+      {"endpoint": "POST /api/workout/session", "issue": "Returns 500 for demo user due to same bug — create_workout_session calls update_weekly_streak which fails at streak_utils.py:59. Blocks the core 'log workout' flow.", "priority": "CRITICAL"},
+      {"endpoint": "POST /api/auth/login (brute-force)", "issue": "After 5 failed attempts returns 500 instead of 429. Root cause in server.py:111 `attempt_doc['locked_until'] > utcnow()` — locked_until is stored naive, utcnow() is aware. Fix the same way (tz_aware=True on AsyncIOMotorClient, or wrap all comparisons).", "priority": "HIGH"}
+    ],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "Dashboard CURRENT PLAN card", "issue": "Shows 'No plan / 0 days / week' for demo user even though GET /api/workout/plan returns a 4-day plan. Caused by /streak 500: Promise.all in dashboard.tsx:21 has no .catch on api.get('/streak'), so the whole aggregation rejects and no data is set. Wrap /streak with .catch(() => null) like the other calls.", "testID": "dashboard-plan-card", "priority": "HIGH"},
+      {"component": "(tabs)/_layout.tsx bottom tabs", "issue": "Tab buttons have no testID props (tab-home / tab-workouts / tab-nutrition / tab-ranking / tab-profile expected by QA). Add `tabBarButtonTestID` or `tabBarTestID` per Tabs.Screen.", "testID": "tab-home/workouts/nutrition/ranking/profile", "priority": "MEDIUM"}
+    ],
+    "integration_issues": [
+      {"flow": "Dashboard load", "issue": "Streak 500 propagates and wipes the dashboard state aggregation.", "affected_testIDs": ["dashboard-streak-card", "dashboard-plan-card", "dashboard-nutrition-card"]}
+    ],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/conftest.py",
+    "/app/backend/tests/test_fitflow_backend.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Fix timezone-naive vs timezone-aware datetime comparisons. Recommended: in /app/backend/server.py change `AsyncIOMotorClient(mongo_url)` to `AsyncIOMotorClient(mongo_url, tz_aware=True)` so all datetimes from Mongo come back as UTC-aware. Then GET /api/streak, POST /api/workout/session, and the 429 lockout path will all work.",
+    "In /app/frontend/app/(tabs)/dashboard.tsx line 22, change `api.get('/streak')` to `api.get('/streak').catch(() => null)` so a streak failure doesn't kill the whole dashboard fetch (immediate mitigation until the backend fix lands).",
+    "Add testIDs to Tabs.Screen so QA can locate each bottom tab: add `tabBarButtonTestID: 'tab-home'` (RN >=0.70) or wrap with a custom tabBarButton that forwards testID.",
+    "Nice-to-have: verify `locked_until` / `last_evaluated_week_start` docs are consistently written with tz-aware utcnow (models/utcnow helper looks correct — problem is on read-side, so the client-level tz_aware=True is the cleanest fix)."
+  ],
+  "critical_code_review_comments": [
+    "streak_utils.py:59 and server.py:111 both compare datetimes without normalizing tz — any record that roundtrips through Mongo will blow up. Standardize by enabling AsyncIOMotorClient(tz_aware=True) at client construction.",
+    "Dashboard Promise.all (/streak) lacks .catch — makes a single 5xx cascade into 'empty dashboard'. Pattern should be consistent across all 5 aggregated calls.",
+    "Bottom tabs have no testIDs — blocks automated QA coverage.",
+    "Frontend .env uses EXPO_PUBLIC_BACKEND_URL (correct), not EXPO_BACKEND_URL; system prompt mentions EXPO_BACKEND_URL — tests used EXPO_PUBLIC_BACKEND_URL as source of truth.",
+    "server.py (651 lines) is large; consider splitting into routers (auth/profile/workout/nutrition/ai) for maintainability."
+  ],
+  "updated_files": [
+    "/app/backend/tests/conftest.py (new)",
+    "/app/backend/tests/test_fitflow_backend.py (new)"
+  ],
+  "success_rate": {"backend": "81% (17/21 pytest)", "frontend": "partial — landing/login/dashboard render, tab testIDs missing, plan card broken by streak 500"},
+  "seed_data_creation": "Test users created via /api/auth/register with @fitflowtest.co emails (reserved .test TLD rejected by EmailStr); workout session + meal records prefixed with TEST_.",
+  "retest_needed": true,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "After main agent switches AsyncIOMotorClient to tz_aware=True and adds .catch on /streak, rerun `pytest /app/backend/tests/test_fitflow_backend.py -v` (expect 21/21) and re-run frontend smoke to confirm dashboard plan card shows '4-Day Upper/Lower Split' and the BF test returns 429 after 5 wrong attempts. Known flaky: AI tests depend on GPT-4o latency (~10-15s each).",
+  "rca_of_issue": "Mongo (via Motor) returns tz-naive datetimes by default. Code paths that wrote with datetime.now(timezone.utc) and then compared the read-back value to another tz-aware datetime raise `TypeError: can't compare offset-naive and offset-aware datetimes`. Two call sites confirmed: (1) streak_utils.py line 59 `last_eval < prev_start`, (2) server.py line 111 `attempt_doc['locked_until'] > utcnow()`. Impact: streak endpoint 500, workout session POST 500 (via update_weekly_streak), brute-force lockout returns 500 instead of 429, dashboard plan card breaks. Mitigation: instantiate `AsyncIOMotorClient(mongo_url, tz_aware=True)` in server.py, or normalize on read (replace tzinfo=timezone.utc). Confirmed by stack traces in /var/log/supervisor/backend.err.log."
+}
