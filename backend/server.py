@@ -45,7 +45,7 @@ logger = logging.getLogger(__name__)
 
 # ============ DB ============
 mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(mongo_url, tz_aware=True)
 db = client[os.environ["DB_NAME"]]
 
 # ============ App ============
@@ -108,8 +108,12 @@ async def login(payload: LoginIn, request: Request):
 
     # Brute force protection
     attempt_doc = await db.login_attempts.find_one({"identifier": identifier})
-    if attempt_doc and attempt_doc.get("locked_until") and attempt_doc["locked_until"] > utcnow():
-        raise HTTPException(status_code=429, detail="Too many failed attempts. Try again later.")
+    if attempt_doc and attempt_doc.get("locked_until"):
+        locked_until = attempt_doc["locked_until"]
+        if locked_until.tzinfo is None:
+            locked_until = locked_until.replace(tzinfo=timezone.utc)
+        if locked_until > utcnow():
+            raise HTTPException(status_code=429, detail="Too many failed attempts. Try again later.")
 
     user = await db.users.find_one({"email": email})
     if not user or not verify_password(payload.password, user["password_hash"]):

@@ -19,11 +19,11 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const [streak, targets, plan, nutToday, sessions] = await Promise.all([
-        api.get("/streak"),
+        api.get("/streak").catch(() => null),
         api.get("/nutrition/targets").catch(() => null),
         api.get("/workout/plan").catch(() => null),
         api.get("/nutrition/today").catch(() => null),
-        api.get<any[]>("/workout/sessions?limit=1"),
+        api.get<any[]>("/workout/sessions?limit=1").catch(() => []),
       ]);
       setData({ streak, targets, plan, nutToday, lastSession: sessions[0] || null });
     } catch (e) {

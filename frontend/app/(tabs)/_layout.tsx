@@ -29,6 +29,7 @@ export default function TabsLayout() {
         options={{
           title: "Dashboard",
           tabBarLabel: "HOME",
+          tabBarButtonTestID: "tab-home",
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
@@ -37,6 +38,7 @@ export default function TabsLayout() {
         options={{
           title: "Workouts",
           tabBarLabel: "WORKOUTS",
+          tabBarButtonTestID: "tab-workouts",
           tabBarIcon: ({ color, size }) => <Dumbbell color={color} size={size} />,
         }}
       />
@@ -45,6 +47,7 @@ export default function TabsLayout() {
         options={{
           title: "Nutrition",
           tabBarLabel: "NUTRITION",
+          tabBarButtonTestID: "tab-nutrition",
           tabBarIcon: ({ color, size }) => <Apple color={color} size={size} />,
         }}
       />
@@ -53,6 +56,7 @@ export default function TabsLayout() {
         options={{
           title: "Muscle Ranking",
           tabBarLabel: "RANKING",
+          tabBarButtonTestID: "tab-ranking",
           tabBarIcon: ({ color, size }) => <Trophy color={color} size={size} />,
         }}
       />
@@ -61,6 +65,7 @@ export default function TabsLayout() {
         options={{
           title: "Profile",
           tabBarLabel: "PROFILE",
+          tabBarButtonTestID: "tab-profile",
           tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
         }}
       />

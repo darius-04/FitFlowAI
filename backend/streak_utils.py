@@ -56,6 +56,8 @@ async def update_weekly_streak(db, user_id: str) -> dict:
 
     # Has previous week already been evaluated?
     last_eval = streak.get("last_evaluated_week_start")
+    if last_eval is not None and last_eval.tzinfo is None:
+        last_eval = last_eval.replace(tzinfo=timezone.utc)
     if last_eval is None or last_eval < prev_start:
         prev_count = await count_workouts_in_range(db, user_id, prev_start, prev_end)
         if prev_count >= target:
