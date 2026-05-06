@@ -31,13 +31,6 @@ async def count_workouts_in_range(db, user_id: str, start: datetime, end: dateti
 
 
 async def update_weekly_streak(db, user_id: str) -> dict:
-    """
-    Streak rules:
-    - If goal achieved last week and not yet credited -> increment.
-    - If last week missed and was after lastEvaluatedWeekStart -> reset to 0.
-    - Update lastEvaluatedWeekStart to last week's monday only after evaluating it (i.e., only after current Monday).
-    Returns the streak document state (current_streak, best_streak).
-    """
     streak = await db.streaks.find_one({"user_id": user_id})
     if not streak:
         streak = {
@@ -45,37 +38,49 @@ async def update_weekly_streak(db, user_id: str) -> dict:
             "current_streak": 0,
             "best_streak": 0,
             "last_evaluated_week_start": None,
+            "last_won_week_start": None, # Adăugăm acest câmp
         }
         await db.streaks.insert_one(dict(streak))
 
     goal_doc = await db.weekly_goals.find_one({"user_id": user_id})
     target = goal_doc["workouts_per_week"] if goal_doc else 3
 
+    cur_start, cur_end = get_current_week_range()
     prev_start, prev_end = get_previous_week_range()
-    cur_start, _ = get_current_week_range()
 
-    # Has previous week already been evaluated?
+    # --- 1. LOGICA PENTRU REZOLVARE RETROSPECTIVĂ (Săptămâna trecută) ---
     last_eval = streak.get("last_evaluated_week_start")
-    if last_eval is not None and last_eval.tzinfo is None:
-        last_eval = last_eval.replace(tzinfo=timezone.utc)
     if last_eval is None or last_eval < prev_start:
-        prev_count = await count_workouts_in_range(db, user_id, prev_start, prev_end)
-        if prev_count >= target:
+        # Dacă săptămâna trecută nu a fost "câștigată" în timp real, verificăm acum
+        last_won = streak.get("last_won_week_start")
+        if last_won != prev_start:
+            prev_count = await count_workouts_in_range(db, user_id, prev_start, prev_end)
+            if prev_count < target and streak.get("current_streak", 0) > 0:
+                streak["current_streak"] = 0 # Resetăm dacă a pierdut săptămâna trecută
+
+        streak["last_evaluated_week_start"] = prev_start
+        await db.streaks.update_one({"user_id": user_id}, {"$set": streak})
+
+    # --- 2. LOGICA PENTRU TIMP REAL (Săptămâna curentă) ---
+    last_won = streak.get("last_won_week_start")
+    # Dacă nu am câștigat deja săptămâna asta...
+    if last_won != cur_start:
+        cur_count = await count_workouts_in_range(db, user_id, cur_start, cur_end)
+        if cur_count >= target:
+            # BINGO! A atins pragul chiar ACUM
             streak["current_streak"] = streak.get("current_streak", 0) + 1
             streak["best_streak"] = max(streak.get("best_streak", 0), streak["current_streak"])
-        else:
-            # If user just registered and never had a chance, don't punish; only reset if they had a streak
-            if streak.get("current_streak", 0) > 0:
-                streak["current_streak"] = 0
-        streak["last_evaluated_week_start"] = prev_start
-        await db.streaks.update_one(
-            {"user_id": user_id},
-            {"$set": {
-                "current_streak": streak["current_streak"],
-                "best_streak": streak["best_streak"],
-                "last_evaluated_week_start": prev_start,
-            }},
-        )
+            streak["last_won_week_start"] = cur_start
+
+            await db.streaks.update_one(
+                {"user_id": user_id},
+                {"$set": {
+                    "current_streak": streak["current_streak"],
+                    "best_streak": streak["best_streak"],
+                    "last_won_week_start": cur_start
+                }}
+            )
+
     return streak
 
 

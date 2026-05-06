@@ -7,6 +7,7 @@ load_dotenv(ROOT_DIR / ".env")
 
 import os
 import logging
+import contextlib
 import uuid
 from datetime import datetime, timezone, timedelta
 from typing import List, Optional
@@ -47,9 +48,43 @@ logger = logging.getLogger(__name__)
 mongo_url = os.environ["MONGO_URL"]
 client = AsyncIOMotorClient(mongo_url, tz_aware=True)
 db = client[os.environ["DB_NAME"]]
-
 # ============ App ============
-app = FastAPI(title="FitFlow AI")
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ============ STARTUP (Codul de la linia 612) ============
+    # Creare Indexuri
+    await db.users.create_index("email", unique=True)
+    await db.users.create_index("id", unique=True)
+    await db.profiles.create_index("user_id", unique=True)
+    await db.workout_plans.create_index("user_id")
+    await db.workout_sessions.create_index([("user_id", 1), ("date", -1)])
+    await db.meals.create_index([("user_id", 1), ("date", -1)])
+    await db.streaks.create_index("user_id", unique=True)
+    await db.weekly_goals.create_index("user_id", unique=True)
+    await db.nutrition_targets.create_index("user_id", unique=True)
+    await db.exercises.create_index("name", unique=True)
+    await db.login_attempts.create_index("identifier")
+    await db.login_attempts.create_index("last_attempt", expireAfterSeconds=3600)
+
+    # Seed exercises if empty
+    count = await db.exercises.count_documents({})
+    if count == 0:
+        for e in EXERCISES:
+            doc = {"id": new_id(), **e, "created_at": utcnow()}
+            try:
+                await db.exercises.insert_one(doc)
+            except Exception as ex:
+                logger.warning("Seed insert skipped: %s", ex)
+        logger.info("Seeded %d exercises", len(EXERCISES))
+
+    yield  # Aici serverul rulează și acceptă cereri
+
+    # ============ SHUTDOWN (Codul de la linia 640) ============
+    client.close()
+    logger.info("MongoDB connection closed.")
+
+app = FastAPI(title="FitFlow AI", lifespan=lifespan)
 api = APIRouter(prefix="/api")
 
 
@@ -608,42 +643,7 @@ async def root():
     return {"app": "FitFlow AI", "version": "1.0", "ok": True}
 
 
-# ============ Startup ============
-@app.on_event("startup")
-async def on_startup():
-    # Indexes
-    await db.users.create_index("email", unique=True)
-    await db.users.create_index("id", unique=True)
-    await db.profiles.create_index("user_id", unique=True)
-    await db.workout_plans.create_index("user_id")
-    await db.workout_sessions.create_index([("user_id", 1), ("date", -1)])
-    await db.meals.create_index([("user_id", 1), ("date", -1)])
-    await db.streaks.create_index("user_id", unique=True)
-    await db.weekly_goals.create_index("user_id", unique=True)
-    await db.nutrition_targets.create_index("user_id", unique=True)
-    await db.exercises.create_index("name", unique=True)
-    await db.login_attempts.create_index("identifier")
-    await db.login_attempts.create_index("last_attempt", expireAfterSeconds=3600)
-
-    # Seed exercises if empty
-    count = await db.exercises.count_documents({})
-    if count == 0:
-        for e in EXERCISES:
-            doc = {"id": new_id(), **e, "created_at": utcnow()}
-            try:
-                await db.exercises.insert_one(doc)
-            except Exception as ex:
-                logger.warning("Seed insert skipped: %s", ex)
-        logger.info("Seeded %d exercises", len(EXERCISES))
-
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    client.close()
-
-
 # ============ Mount ============
-app.include_router(api)
 
 app.add_middleware(
     CORSMiddleware,
@@ -652,3 +652,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(api)
+
+if __name__ == "__main__":
+    import uvicorn
+    # "server:app" înseamnă: caută în fișierul server.py variabila numită app
+    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
