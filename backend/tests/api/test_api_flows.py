@@ -270,3 +270,106 @@ def test_meals_and_today_nutrition_flow(api_client):
     meals = api_client.get("/api/meals", headers=auth_headers(token))
     assert meals.status_code == 200
     assert meals.json() == []
+
+
+def test_ai_endpoints_use_mocked_services(api_client, monkeypatch):
+    auth = register(api_client, email="ai-user@fitflowtest.co")
+    token = auth["access_token"]
+    create_profile(api_client, token)
+
+    async def fake_scan_meal(image_base64):
+        assert image_base64 == "fake-image"
+        return {
+            "detectedFoods": [
+                {
+                    "name": "Chicken",
+                    "estimatedQuantity": "200g",
+                    "confidence": 0.9,
+                    "estimatedCalories": 330,
+                    "protein": 62,
+                    "carbs": 0,
+                    "fat": 7,
+                }
+            ],
+            "totalEstimate": {"calories": 330, "protein": 62, "carbs": 0, "fat": 7},
+            "disclaimer": "Approximate estimate.",
+        }
+
+    async def fake_scan_fridge(image_base64):
+        assert image_base64 == "fake-image"
+        return {
+            "detectedIngredients": [
+                {"name": "Eggs", "category": "protein", "confidence": 0.95}
+            ],
+            "suggestedRecipes": [
+                {
+                    "title": "Egg bowl",
+                    "ingredientsUsed": ["Eggs"],
+                    "difficulty": "easy",
+                    "calories": 300,
+                    "protein": 20,
+                    "carbs": 10,
+                    "fat": 18,
+                }
+            ],
+            "disclaimer": "General suggestion.",
+        }
+
+    async def fake_suggestions(**kwargs):
+        assert kwargs["remaining_calories"] == 3090
+        return {
+            "suggestions": [
+                {
+                    "name": "Meal 1",
+                    "description": "Balanced meal.",
+                    "calories": 1000,
+                    "protein": 45,
+                    "carbs": 140,
+                    "fat": 28,
+                },
+                {
+                    "name": "Meal 2",
+                    "description": "Balanced meal.",
+                    "calories": 1000,
+                    "protein": 45,
+                    "carbs": 140,
+                    "fat": 28,
+                },
+                {
+                    "name": "Meal 3",
+                    "description": "Balanced meal.",
+                    "calories": 1090,
+                    "protein": 50,
+                    "carbs": 159,
+                    "fat": 30,
+                },
+            ]
+        }
+
+    monkeypatch.setattr(server, "scan_meal_image", fake_scan_meal)
+    monkeypatch.setattr(server, "scan_fridge_image", fake_scan_fridge)
+    monkeypatch.setattr(server, "generate_meal_suggestions", fake_suggestions)
+
+    meal_scan = api_client.post(
+        "/api/ai/scan-meal",
+        headers=auth_headers(token),
+        json={"image_base64": "fake-image"},
+    )
+    assert meal_scan.status_code == 200
+    assert meal_scan.json()["detectedFoods"][0]["name"] == "Chicken"
+
+    fridge_scan = api_client.post(
+        "/api/ai/scan-fridge",
+        headers=auth_headers(token),
+        json={"image_base64": "fake-image"},
+    )
+    assert fridge_scan.status_code == 200
+    assert fridge_scan.json()["detectedIngredients"][0]["name"] == "Eggs"
+
+    suggestions = api_client.post(
+        "/api/ai/meal-suggestions",
+        headers=auth_headers(token),
+        json={"ingredients": ["eggs"]},
+    )
+    assert suggestions.status_code == 200
+    assert len(suggestions.json()["suggestions"]) == 3

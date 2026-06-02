@@ -25,13 +25,13 @@ jobs:
       - name: Install backend dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest fastapi httpx pydantic email-validator python-dotenv pyjwt bcrypt motor pymongo google-genai
+          pip install pytest pytest-cov fastapi httpx pydantic email-validator python-dotenv pyjwt bcrypt motor pymongo google-genai
 
       - name: Run backend unit tests
-        run: pytest backend/tests/unit -q --confcutdir=backend/tests/unit
+        run: pytest backend/tests/unit -q --confcutdir=backend/tests/unit --cov=backend --cov-report=term-missing --cov-append
 
       - name: Run backend API tests
-        run: pytest backend/tests/api -q --confcutdir=backend/tests/api
+        run: pytest backend/tests/api -q --confcutdir=backend/tests/api --cov=backend --cov-report=term-missing --cov-append
 
       - name: Run mocked AI evals
         run: pytest evals -q
