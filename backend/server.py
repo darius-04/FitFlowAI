@@ -183,8 +183,7 @@ async def me(user: dict = Depends(get_current_user)):
 
 
 @api.post("/auth/refresh")
-async\
-        96+def refresh(payload: dict):
+async def refresh(payload: dict):
     rt = payload.get("refresh_token", "")
     try:
         data = decode_token(rt)
