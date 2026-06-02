@@ -16,7 +16,8 @@ The CI workflow validates:
 - frontend TypeScript checks;
 - frontend lint;
 - frontend Jest component tests;
-- Expo web build.
+- Expo web build;
+- downloadable web build artifact.
 
 Workflow file:
 
@@ -60,3 +61,5 @@ npm run lint
 npm run test
 npm run build:web
 ```
+
+After CI succeeds, the Expo web build is available in GitHub Actions as the `fitflow-web-build` artifact.

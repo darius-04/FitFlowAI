@@ -107,6 +107,7 @@ cd frontend
 npm ci
 npm run typecheck
 npm run lint
+npm run test
 npm run build:web
 ```
 
@@ -139,6 +140,8 @@ npm run test
 npm run build:web
 ```
 
+After a successful frontend build, CI uploads `frontend/dist` as a downloadable artifact named `fitflow-web-build`.
+
 ## Live AI Evals
 
 Workflow:
@@ -168,6 +171,7 @@ Implemented:
 - frontend lint;
 - frontend component tests;
 - frontend web build;
+- downloadable Expo web build artifact;
 - GitHub Actions automation;
 - branch protection documentation.
 

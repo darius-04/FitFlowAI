@@ -69,3 +69,10 @@ jobs:
 
       - name: Build web
         run: npm run build:web
+
+      - name: Upload web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitflow-web-build
+          path: frontend/dist
+          if-no-files-found: error
