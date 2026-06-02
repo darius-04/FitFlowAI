@@ -238,6 +238,16 @@ class MealSuggestionIn(BaseModel):
     remaining_carbs: Optional[int] = None
     remaining_fat: Optional[int] = None
 
+class SuggestedMeal(BaseModel):
+    name: str
+    description: str
+    calories: int
+    protein: int
+    carbs: int
+    fat: int
+
+class MealPlan(BaseModel):
+    suggestions: List[SuggestedMeal]
 
 # ============ Streak / Goal ============
 class WeeklyGoalIn(BaseModel):

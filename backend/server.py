@@ -602,30 +602,47 @@ async def ai_scan_fridge(payload: ScanImageIn, user: dict = Depends(get_current_
 
 @api.post("/ai/meal-suggestions")
 async def ai_meal_suggestions(payload: MealSuggestionIn, user: dict = Depends(get_current_user)):
-    # If remaining values not provided, compute from today
-    if payload.remaining_calories is None:
-        target = await db.nutrition_targets.find_one({"user_id": user["id"]})
-        if target:
-            now = utcnow()
-            start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-            end = start + timedelta(days=1)
-            meals = await db.meals.find(
-                {"user_id": user["id"], "date": {"$gte": start, "$lt": end}}
-            ).to_list(100)
-            consumed_cal = sum(m.get("calories", 0) for m in meals)
-            consumed_p = sum(m.get("protein", 0) for m in meals)
-            consumed_c = sum(m.get("carbs", 0) for m in meals)
-            consumed_f = sum(m.get("fat", 0) for m in meals)
-            payload.remaining_calories = max(0, int(target["calories"] - consumed_cal))
-            payload.remaining_protein = max(0, int(target["protein"] - consumed_p))
-            payload.remaining_carbs = max(0, int(target["carbs"] - consumed_c))
-            payload.remaining_fat = max(0, int(target["fat"] - consumed_f))
+    # 1. Luăm țintele totale din DB
+    target = await db.nutrition_targets.find_one({"user_id": user["id"]})
+
+    if not target:
+        raise HTTPException(status_code=400, detail="Nu s-au găsit ținte nutriționale.")
+
+    target_cals = int(target.get("calories", 2000))
+    target_prot = int(target.get("protein", 150))
+    target_carbs = int(target.get("carbs", 200))
+    target_fat = int(target.get("fat", 65))
+
+    # 2. Căutăm toate mesele mâncate AZI de utilizator
+    now = utcnow()
+    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    end = start + timedelta(days=1)
+
+    meals_today = await db.meals.find(
+        {"user_id": user["id"], "date": {"$gte": start, "$lt": end}}
+    ).to_list(100)
+
+    # Adunăm tot ce s-a consumat
+    consumed_cals = sum(m.get("calories", 0) for m in meals_today)
+    consumed_prot = sum(m.get("protein", 0) for m in meals_today)
+    consumed_carbs = sum(m.get("carbs", 0) for m in meals_today)
+    consumed_fat = sum(m.get("fat", 0) for m in meals_today)
+
+    # 3. Calculăm RĂMAS (Remaining) - folosim max(0, ...) ca să nu dea cu minus dacă ai depășit
+    rem_cals = max(0, int(target_cals - consumed_cals))
+    rem_prot = max(0, int(target_prot - consumed_prot))
+    rem_carbs = max(0, int(target_carbs - consumed_carbs))
+    rem_fat = max(0, int(target_fat - consumed_fat))
+
+    print(f"DEBUG BACKEND: Total: {target_cals} | Consumat: {consumed_cals} | RĂMAS pt AI: {rem_cals} kcal")
+
+    # 4. Apelăm AI-ul cu ce a RĂMAS
     result = await generate_meal_suggestions(
-        ingredients=payload.ingredients,
-        remaining_calories=payload.remaining_calories,
-        remaining_protein=payload.remaining_protein,
-        remaining_carbs=payload.remaining_carbs,
-        remaining_fat=payload.remaining_fat,
+        remaining_calories=rem_cals,
+        remaining_protein=rem_prot,
+        remaining_carbs=rem_carbs,
+        remaining_fat=rem_fat,
+        ingredients=payload.ingredients
     )
     return result
 

@@ -8,6 +8,7 @@ from google.genai import types
 from typing import Optional, List
 from dotenv import load_dotenv
 from pathlib import Path
+from models import MealPlan
 
 # Configurare Logging
 logging.basicConfig(level=logging.INFO)
@@ -113,34 +114,33 @@ async def scan_fridge_image(image_b64: str) -> dict:
         return {"error": True, "disclaimer": str(e)}
 
 async def generate_meal_suggestions(
-        ingredients: Optional[List[str]] = None,
-        remaining_calories: Optional[int] = None,
-        **macros
+        remaining_calories: int,
+        remaining_protein: int,
+        remaining_carbs: int,
+        remaining_fat: int,
+        ingredients: Optional[List[str]] = None
 ) -> dict:
-    """Generează sugestii de rețete bazate pe ingredientele din frigider."""
     try:
-        constraints = []
-        if ingredients:
-            constraints.append(f"Use these ingredients: {', '.join(ingredients)}.")
-        if remaining_calories:
-            constraints.append(f"Target ~{remaining_calories} kcal per meal.")
-
         prompt = (
-            f"Suggest 3 healthy meals. {' '.join(constraints)} "
-            "Return ONLY a JSON object: {\"suggestions\": ["
-            "{\"name\": str, \"ingredients\": [str], \"preparation\": str, \"estimatedCalories\": int, \"protein\": int, \"carbs\": int, \"fat\": int}"
-            "]}"
+            f"Generate exactly 3 meals (1 Breakfast, 1 Lunch, 1 Dinner). "
+            f"CRITICAL INSTRUCTION: The TOTAL sum of all 3 meals MUST be EXACTLY: "
+            f"{remaining_calories} kcal, {remaining_protein}g protein, "
+            f"{remaining_carbs}g carbs, {remaining_fat}g fat. "
+            "You MUST distribute these exact targets across the 3 meals. Do not use default values."
         )
 
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model='gemini-3.1-flash-lite-preview',
             config=types.GenerateContentConfig(
-                system_instruction="You are a helpful healthy meal planner. Respond ONLY with JSON.",
+                system_instruction="You are a strict nutritionist. You MUST hit the exact macro targets provided. Do not hallucinate.",
                 response_mime_type="application/json",
+                response_schema=MealPlan, # FORȚĂM SCHEMA SĂ RESPECTE CALORIILE
             ),
             contents=prompt
         )
+
+        # Returnăm rezultatul ca dicționar
         return json.loads(response.text)
     except Exception as e:
-        logger.error(f"Gemini Suggestions error: {e}")
+        print(f"Gemini error: {e}")
         return {"suggestions": [], "error": True}
