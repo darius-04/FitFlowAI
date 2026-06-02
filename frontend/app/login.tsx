@@ -68,7 +68,7 @@ export default function Login() {
             />
             <TouchableOpacity onPress={() => router.push("/register")} style={styles.link} testID="login-go-register">
               <Text style={styles.linkText}>
-                Don't have an account? <Text style={{ color: COLORS.primary_workout }}>Sign up</Text>
+                Don&apos;t have an account? <Text style={{ color: COLORS.primary_workout }}>Sign up</Text>
               </Text>
             </TouchableOpacity>
           </View>

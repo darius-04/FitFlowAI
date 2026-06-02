@@ -68,7 +68,7 @@ export default function Onboarding() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           <Text style={styles.h1}>TELL US ABOUT YOU</Text>
-          <Text style={styles.sub}>We'll personalize your plan and nutrition targets.</Text>
+          <Text style={styles.sub}>We&apos;ll personalize your plan and nutrition targets.</Text>
 
           <View style={{ flexDirection: "row", gap: 12 }}>
             <Input label="Age" value={age} onChangeText={setAge} keyboardType="number-pad" containerStyle={{ flex: 1 }} testID="onb-age-input" />

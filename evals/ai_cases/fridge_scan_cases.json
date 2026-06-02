@@ -1,0 +1,49 @@
+{
+  "case_id": "fridge_scan_common_ingredients",
+  "input_summary": "Fridge with eggs, yogurt, spinach, chicken, rice, and tomatoes.",
+  "mock_output": {
+    "detectedIngredients": [
+      {
+        "name": "Eggs",
+        "category": "protein",
+        "confidence": 0.92
+      },
+      {
+        "name": "Greek yogurt",
+        "category": "dairy",
+        "confidence": 0.84
+      },
+      {
+        "name": "Spinach",
+        "category": "vegetable",
+        "confidence": 0.88
+      },
+      {
+        "name": "Chicken breast",
+        "category": "protein",
+        "confidence": 0.76
+      }
+    ],
+    "suggestedRecipes": [
+      {
+        "title": "Chicken spinach rice bowl",
+        "ingredientsUsed": ["Chicken breast", "Spinach", "Rice"],
+        "difficulty": "easy",
+        "calories": 520,
+        "protein": 48,
+        "carbs": 55,
+        "fat": 12
+      },
+      {
+        "title": "Greek yogurt egg toast",
+        "ingredientsUsed": ["Greek yogurt", "Eggs"],
+        "difficulty": "easy",
+        "calories": 390,
+        "protein": 31,
+        "carbs": 28,
+        "fat": 16
+      }
+    ],
+    "disclaimer": "Meal ideas are general wellness suggestions and do not replace advice from a doctor or dietitian."
+  }
+}

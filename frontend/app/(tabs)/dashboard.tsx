@@ -102,7 +102,7 @@ export default function Dashboard() {
       {/* Nutrition target */}
       <Card style={{ marginTop: 16 }} testID="dashboard-nutrition-card">
         <View style={styles.rowBetween}>
-          <Text style={styles.cardTitle}>TODAY'S NUTRITION</Text>
+        <Text style={styles.cardTitle}>TODAY&apos;S NUTRITION</Text>
           <Apple color={COLORS.primary_nutrition} size={22} />
         </View>
         <View style={{ height: 12 }} />

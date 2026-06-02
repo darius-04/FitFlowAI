@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { View, Image, ActivityIndicator, Alert, Text, StyleSheet, ScrollView, Platform } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
 import { api } from '../lib/api';
 import { Button } from '../components/Button';
 import { Card, Disclaimer } from '../components/ui';
@@ -18,7 +17,6 @@ type Recipe = {
 };
 
 export default function FridgeScan() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [image, setImage] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<Recipe[]>([]);

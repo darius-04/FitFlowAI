@@ -44,14 +44,14 @@ export default function Progress() {
       sessions.forEach((s: any) => s.exercises?.forEach((ex: any) => set.add(ex.name)));
       const list = Array.from(set);
       setExerciseList(list);
-      if (list.length && !selectedEx) setSelectedEx(list[0]);
+      setSelectedEx((current) => current || list[0] || null);
     }).catch(() => {});
     loadProgress();
-  }, []);
+  }, [loadProgress]);
 
   useEffect(() => {
     if (selectedEx) loadProgress(selectedEx);
-  }, [selectedEx]);
+  }, [loadProgress, selectedEx]);
 
   const w = weekly.slice(-8);
   const labels = w.map((x) => x.week_start.slice(5));

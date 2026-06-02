@@ -1,0 +1,43 @@
+{
+  "case_id": "remaining_macros_three_meals",
+  "target": {
+    "calories": 1800,
+    "protein": 120,
+    "carbs": 210,
+    "fat": 50
+  },
+  "tolerance": {
+    "calories": 75,
+    "protein": 12,
+    "carbs": 20,
+    "fat": 8
+  },
+  "mock_output": {
+    "suggestions": [
+      {
+        "name": "Protein oatmeal bowl",
+        "description": "Oats with Greek yogurt, berries, and a scoop of protein powder.",
+        "calories": 520,
+        "protein": 40,
+        "carbs": 70,
+        "fat": 10
+      },
+      {
+        "name": "Chicken rice bowl",
+        "description": "Chicken breast with rice, vegetables, and olive oil.",
+        "calories": 720,
+        "protein": 50,
+        "carbs": 85,
+        "fat": 20
+      },
+      {
+        "name": "Egg and yogurt plate",
+        "description": "Eggs, Greek yogurt, fruit, and a small serving of nuts.",
+        "calories": 560,
+        "protein": 30,
+        "carbs": 55,
+        "fat": 20
+      }
+    ]
+  }
+}

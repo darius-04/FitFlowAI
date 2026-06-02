@@ -1,6 +1,7 @@
 export const COLORS = {
   background: "#0A0A0A",
   surface: "#171717",
+  card_bg: "#171717",
   surface_highlight: "#262626",
   primary_workout: "#FF3B30",
   primary_nutrition: "#007AFF",

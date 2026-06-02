@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
 import { api } from '../lib/api';
 import { Button } from '../components/Button';
 import { Card, Disclaimer } from '../components/ui';
 import { COLORS } from '../lib/constants';
-import { Sparkles, PlusCircle } from 'lucide-react-native';
+import { Sparkles } from 'lucide-react-native';
 
 type Suggestion = {
   name: string;
@@ -17,7 +16,6 @@ type Suggestion = {
 };
 
 export default function MealSuggestions() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
 
@@ -70,7 +68,7 @@ const fetchSuggestions = async () => {
        // Afișăm doar mesajul de succes, dar NU mai dăm router.back()
        Alert.alert("Success", `${meal.name} added to your diary!`);
 
-     } catch (e: any) {
+     } catch {
        Alert.alert("Error", "Could not save the meal.");
      }
    };
@@ -82,7 +80,7 @@ const fetchSuggestions = async () => {
         <Text style={styles.title}>AI Suggestions</Text>
       </View>
 
-      <Disclaimer>Based on your daily macro goals and what you've eaten today.</Disclaimer>
+      <Disclaimer>Based on your daily macro goals and what you&apos;ve eaten today.</Disclaimer>
 
       {loading ? (
         <View style={styles.loadingArea}>

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, FlatList } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Modal, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import { Card } from "../components/ui";
 import { Button } from "../components/Button";
 import { Input } from "../components/Input";
 import { COLORS } from "../lib/constants";
 import { api } from "../lib/api";
-import { Plus, Trash2, X } from "lucide-react-native";
+import { Trash2, X } from "lucide-react-native";
 
 type SetRow = { reps: string; weight: string; rpe: string };
 type ExercisePick = {
@@ -175,7 +175,13 @@ export default function WorkoutSession() {
   );
 }
 
-const SmallInput = ({ value, onChange, testID }: any) => (
+type SmallInputProps = {
+  value: string;
+  onChange: (value: string) => void;
+  testID: string;
+};
+
+const SmallInput = ({ value, onChange, testID }: SmallInputProps) => (
   <TouchableOpacity activeOpacity={1} style={{ flex: 1, marginHorizontal: 4 }}>
     <Input
       value={value}

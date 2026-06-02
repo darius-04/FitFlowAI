@@ -1,9 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, RefreshControl, TouchableOpacity, ActivityIndicator } from "react-native";
 import { useRouter, useFocusEffect } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { Card, ProgressBar, Disclaimer } from "../../components/ui";
-import { Button } from "../../components/Button";
 import { COLORS } from "../../lib/constants";
 import { api } from "../../lib/api";
 import { Camera, Refrigerator, ChefHat, Trash2 } from "lucide-react-native";
