@@ -94,10 +94,10 @@ async def scan_fridge_image(image_b64: str) -> dict:
             "Analyze this fridge interior. Return ONLY a JSON object with this shape:\n"
             "{\n"
             '  "detectedIngredients": [{"name": "string", "category": "string", "confidence": float}],\n'
-            '  "suggestedRecipes": [{"title": "string", "ingredientsUsed": ["string"], "difficulty": "string"}],\n'
+            '  "suggestedRecipes": [{"title": "string", "ingredientsUsed": ["string"], "difficulty": "string", "calories": int, "protein": int, "carbs": int, "fat": int}],\n'
             '  "disclaimer": "string"\n'
             "}\n"
-            "Identify as many raw ingredients as possible."
+            "Identify as many raw ingredients as possible. For each suggested recipe, estimate the total calories, protein (in grams), carbs (in grams), and fat (in grams) per serving."
         )
 
         response = client.models.generate_content(

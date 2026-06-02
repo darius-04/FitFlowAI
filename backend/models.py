@@ -34,7 +34,6 @@ class ExperienceLevel(str, Enum):
     intermediate = "intermediate"
     advanced = "advanced"
 
-
 class MuscleGroup(str, Enum):
     chest = "chest"
     back = "back"
@@ -214,7 +213,24 @@ class MealOut(BaseModel):
 class ScanImageIn(BaseModel):
     image_base64: str  # data URL or raw base64
 
+class DetectedIngredient(BaseModel):
+    name: str
+    category: str
+    confidence: float
 
+class SuggestedRecipe(BaseModel):
+    title: str
+    ingredientsUsed: List[str]
+    difficulty: str
+    calories: int  # <-- Aici forțăm Gemini să ne dea caloriile
+    protein: int   # <-- și proteinele
+    carbs: int     # <-- și carbohidrații
+    fat: int       # <-- și grăsimile
+
+class FridgeScanOut(BaseModel):
+    detectedIngredients: List[DetectedIngredient]
+    suggestedRecipes: List[SuggestedRecipe]
+    disclaimer: str
 class MealSuggestionIn(BaseModel):
     ingredients: Optional[List[str]] = None
     remaining_calories: Optional[int] = None
