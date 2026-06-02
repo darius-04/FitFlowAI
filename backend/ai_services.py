@@ -13,13 +13,16 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / ".env")
+BASE_DIR = Path(__file__).resolve().parent
 
-# Inițializare Client - SINGURA metodă necesară pentru noul SDK
+ENV_PATH = BASE_DIR / ".env"
+
+load_dotenv(dotenv_path=ENV_PATH)
+
+api_key = os.getenv("GEMINI_API_KEY")
+
 client = genai.Client(
-    api_key=os.environ.get("GEMINI_API_KEY"),
-    http_options={'api_version': 'v1'}
+    api_key=api_key.strip() if api_key else None
 )
 
 def _normalize_image_b64(b64: str) -> bytes:
@@ -29,81 +32,85 @@ def _normalize_image_b64(b64: str) -> bytes:
     return base64.b64decode(b64)
 
 async def scan_meal_image(image_b64: str) -> dict:
-    """Analizează poza mesei folosind noul SDK google-genai."""
     try:
         image_bytes = _normalize_image_b64(image_b64)
+        image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
 
-        system_msg = (
-            "You are a nutrition assistant. Analyze the meal photo and identify food items. "
-            "Return ONLY valid JSON."
-        )
-
-        prompt = (
+        full_prompt = (
             "Analyze this meal photo. Return ONLY a JSON object with this shape:\n"
             "{\n"
             '  "detectedFoods": [\n'
-            '    {"name": str, "estimatedQuantity": str, "confidence": float, '
+            '    {"name": "string", "estimatedQuantity": "string", "confidence": float, '
             '"estimatedCalories": int, "protein": int, "carbs": int, "fat": int}\n'
             '  ],\n'
             '  "totalEstimate": {"calories": int, "protein": int, "carbs": int, "fat": int},\n'
-            '  "disclaimer": str\n'
+            '  "disclaimer": "string"\n'
             "}\n"
+            "Do not include markdown tags like ```json."
         )
 
-        response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            config=types.GenerateContentConfig(
-                system_instruction=system_msg,
-                response_mime_type="application/json",
-            ),
-            contents=[
-                prompt,
-                types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
-            ]
-        )
+        # Am actualizat lista conform catalogului tău real
+        available_models = [
+            "gemini-3.1-flash-lite-preview",
+            "gemini-2.5-flash",
+            "gemini-flash-latest"
+        ]
 
-        parsed = json.loads(response.text)
+        last_error = None
 
-        # Recalculare totaluri dacă AI-ul a dat rateu la sumă
-        foods = parsed.get("detectedFoods", [])
-        if not parsed.get("totalEstimate") or parsed["totalEstimate"].get("calories") == 0:
-            parsed["totalEstimate"] = {
-                "calories": sum(f.get("estimatedCalories", 0) for f in foods),
-                "protein": sum(f.get("protein", 0) for f in foods),
-                "carbs": sum(f.get("carbs", 0) for f in foods),
-                "fat": sum(f.get("fat", 0) for f in foods),
-            }
-        return parsed
+        for model_name in available_models:
+            try:
+                logger.info(f"Încercare scanare cu modelul: {model_name}")
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=[full_prompt, image_part]
+                )
+
+                if response and response.text:
+                    clean_json = response.text.replace("```json", "").replace("```", "").strip()
+                    return json.loads(clean_json)
+
+            except Exception as e:
+                last_error = e
+                # Dacă e 404 (model expirat) sau 503 (ocupat), continuăm cu următorul
+                if "404" in str(e) or "503" in str(e):
+                    logger.warning(f"Modelul {model_name} nu este disponibil. Încercăm următorul...")
+                    continue
+                else:
+                    break
+
+        raise last_error
 
     except Exception as e:
-        logger.error(f"Gemini Meal Scan error: {e}")
-        return {
-            "detectedFoods": [],
-            "totalEstimate": {"calories": 0, "protein": 0, "carbs": 0, "fat": 0},
-            "disclaimer": "Eroare la analiza imaginii.",
-            "error": True
-        }
-
+        logger.error(f"Eroare finală: {e}")
+        return {"error": True, "disclaimer": f"Eroare: {str(e)}"}
 async def scan_fridge_image(image_b64: str) -> dict:
-    """Detectează ingredientele din frigider."""
     try:
         image_bytes = _normalize_image_b64(image_b64)
+        image_part = types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
+
+        # Prompt specific pentru frigider
+        fridge_prompt = (
+            "Analyze this fridge interior. Return ONLY a JSON object with this shape:\n"
+            "{\n"
+            '  "detectedIngredients": [{"name": "string", "category": "string", "confidence": float}],\n'
+            '  "suggestedRecipes": [{"title": "string", "ingredientsUsed": ["string"], "difficulty": "string"}],\n'
+            '  "disclaimer": "string"\n'
+            "}\n"
+            "Identify as many raw ingredients as possible."
+        )
 
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
-            config=types.GenerateContentConfig(
-                system_instruction="You are a kitchen assistant. List visible ingredients from the photo.",
-                response_mime_type="application/json",
-            ),
-            contents=[
-                "List all visible ingredients. Return JSON: {\"detectedIngredients\": [{\"name\": str, \"confidence\": float}], \"disclaimer\": str}",
-                types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")
-            ]
+            model="gemini-3.1-flash-lite-preview",
+            contents=[fridge_prompt, image_part]
         )
-        return json.loads(response.text)
+
+        clean_json = response.text.replace("```json", "").replace("```", "").strip()
+        return json.loads(clean_json)
+
     except Exception as e:
-        logger.error(f"Gemini Fridge Scan error: {e}")
-        return {"detectedIngredients": [], "error": True}
+        logger.error(f"Fridge Scan Error: {e}")
+        return {"error": True, "disclaimer": str(e)}
 
 async def generate_meal_suggestions(
         ingredients: Optional[List[str]] = None,
