@@ -135,6 +135,7 @@ Frontend job:
 npm ci
 npm run typecheck
 npm run lint
+npm run test
 npm run build:web
 ```
 
@@ -165,13 +166,14 @@ Implemented:
 - mocked AI evals;
 - frontend typecheck;
 - frontend lint;
+- frontend component tests;
 - frontend web build;
 - GitHub Actions automation;
 - branch protection documentation.
 
 Recommended next steps:
 
-1. Add frontend component tests with Jest and React Native Testing Library.
+1. Add more frontend screen tests for auth, onboarding, workouts, and nutrition.
 2. Add optional e2e tests for high-level user flows.
 3. Ask a repository owner to enable branch protection using `docs/branch_protection.md`.
 4. Add coverage thresholds once the team agrees on a realistic minimum.
