@@ -1,6 +1,14 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const API_BASE = "http://10.0.2.2:8000/api";
+const DEFAULT_API_BASE = "http://10.0.2.2:8000/api";
+
+export function resolveApiBase(envUrl?: string | null): string {
+  const trimmedUrl = envUrl?.trim().replace(/\/+$/, "");
+  if (!trimmedUrl) return DEFAULT_API_BASE;
+  return trimmedUrl.endsWith("/api") ? trimmedUrl : `${trimmedUrl}/api`;
+}
+
+export const API_BASE = resolveApiBase(process.env.EXPO_PUBLIC_BACKEND_URL);
 
 const TOKEN_KEY = "fitflow_token";
 const REFRESH_KEY = "fitflow_refresh";
