@@ -173,6 +173,9 @@ class ExerciseOut(BaseModel):
     secondary_muscle_groups: List[MuscleGroup] = []
     equipment: str
     difficulty: str
+    met_value: float = 3.5
+    met_code: Optional[str] = None
+    met_category: Optional[str] = None
 
 
 # ============ Meal ============

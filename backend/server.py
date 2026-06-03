@@ -78,6 +78,16 @@ async def lifespan(app: FastAPI):
                 logger.warning("Seed insert skipped: %s", ex)
         logger.info("Seeded %d exercises", len(EXERCISES))
 
+
+    for e in EXERCISES:
+        await db.exercises.update_one(
+            {"name": e["name"]},
+            {"$set": {
+                "met_value": e["met_value"],
+                "met_code": e["met_code"],
+                "met_category": e["met_category"],
+            }},
+        )
     yield  # Aici serverul rulează și acceptă cereri
 
     # ============ SHUTDOWN (Codul de la linia 640) ============
