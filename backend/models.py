@@ -162,6 +162,8 @@ class WorkoutSessionOut(BaseModel):
     exercises: List[dict]
     total_volume: float
     total_sets: int
+    estimated_calories: Optional[float] = None
+    exercise_calories: List[dict] = Field(default_factory=list)
     created_at: datetime
 
 
@@ -176,6 +178,7 @@ class ExerciseOut(BaseModel):
     met_value: float = 3.5
     met_code: Optional[str] = None
     met_category: Optional[str] = None
+    estimated_kcal_per_set: Optional[float] = None
 
 
 # ============ Meal ============
