@@ -185,6 +185,13 @@ def test_auth_profile_nutrition_and_plan_flow(api_client):
     assert plan.status_code == 200
     assert plan.json()["name"] == "4-Day Upper/Lower Split"
 
+    exercises = api_client.get("/api/exercises?weight_kg=78")
+    assert exercises.status_code == 200
+    bench = next(item for item in exercises.json() if item["name"] == "Bench Press")
+    assert bench["met_value"] == 6.0
+    assert bench["met_code"] == "02050"
+    assert bench["estimated_kcal_per_set"] == 11.5
+
 
 def test_workout_session_updates_history_progress_and_ranking(api_client):
     auth = register(api_client, email="workout-user@fitflowtest.co")
@@ -213,10 +220,16 @@ def test_workout_session_updates_history_progress_and_ranking(api_client):
     body = session.json()
     assert body["total_volume"] == 1000
     assert body["total_sets"] == 2
+    assert body["estimated_calories"] == 22.9
+    assert body["exercise_calories"][0]["name"] == "Bench Press"
+    assert body["exercise_calories"][0]["estimated_calories"] == 22.9
+    assert body["exercises"][0]["met_value"] == 6.0
+    assert body["exercises"][0]["estimated_calories"] == 22.9
 
     history = api_client.get("/api/workout/sessions", headers=auth_headers(token))
     assert history.status_code == 200
     assert len(history.json()) == 1
+    assert history.json()[0]["estimated_calories"] == 22.9
 
     progress = api_client.get(
         "/api/workout/progress?exercise_name=Bench%20Press",

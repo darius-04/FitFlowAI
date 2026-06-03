@@ -32,6 +32,7 @@ from auth import (
 from nutrition import compute_nutrition_targets
 from workout_generator import generate_workout_plan
 from seed_data import EXERCISES
+from calorie_calculator import calculate_exercise_calories, calculate_session_calories
 from streak_utils import (
     get_current_week_range, count_workouts_in_range,
     update_weekly_streak, get_weekly_progress,
@@ -311,8 +312,16 @@ async def get_nutrition_targets(user: dict = Depends(get_current_user)):
 
 # ============ Exercises ============
 @api.get("/exercises", response_model=List[ExerciseOut])
-async def list_exercises():
+async def list_exercises(weight_kg: Optional[float] = None):
     items = await db.exercises.find({}, {"_id": 0}).to_list(500)
+    if weight_kg and weight_kg > 0:
+        for item in items:
+            item["estimated_kcal_per_set"] = calculate_exercise_calories(
+                item.get("met_value", 3.5),
+                weight_kg,
+                sets=1,
+                reps=8,
+            )
     return [ExerciseOut(**i) for i in items]
 
 
@@ -346,31 +355,56 @@ def _calc_session_volume(session: dict) -> tuple[float, int]:
     return total_volume, total_sets
 
 
+async def _lookup_exercise_met(exercise_id: Optional[str], name: str) -> dict:
+    query = {"id": exercise_id} if exercise_id else {"name": name}
+    exercise = await db.exercises.find_one(query)
+    if not exercise and exercise_id:
+        exercise = await db.exercises.find_one({"name": name})
+    return {
+        "met_value": float((exercise or {}).get("met_value", 3.5)),
+        "met_code": (exercise or {}).get("met_code"),
+        "met_category": (exercise or {}).get("met_category"),
+    }
+
+
 @api.post("/workout/session", response_model=WorkoutSessionOut)
 async def create_workout_session(payload: WorkoutSessionIn, user: dict = Depends(get_current_user)):
     if not payload.exercises:
         raise HTTPException(status_code=400, detail="At least one exercise required")
+
+    profile = await db.profiles.find_one({"user_id": user["id"]})
+    weight_kg = float((profile or {}).get("weight", 0))
+    logged_exercises = []
+    for ex in payload.exercises:
+        met = await _lookup_exercise_met(ex.exercise_id, ex.name)
+        logged_exercises.append({
+            "id": new_id(),
+            "exercise_id": ex.exercise_id,
+            "name": ex.name,
+            "primary_muscle_group": ex.primary_muscle_group.value,
+            "secondary_muscle_groups": [s.value for s in ex.secondary_muscle_groups],
+            "sets": [s.dict() for s in ex.sets],
+            **met,
+        })
+
     session = {
         "id": new_id(),
         "user_id": user["id"],
         "date": payload.date or utcnow(),
         "notes": payload.notes,
-        "exercises": [
-            {
-                "id": new_id(),
-                "exercise_id": ex.exercise_id,
-                "name": ex.name,
-                "primary_muscle_group": ex.primary_muscle_group.value,
-                "secondary_muscle_groups": [s.value for s in ex.secondary_muscle_groups],
-                "sets": [s.dict() for s in ex.sets],
-            }
-            for ex in payload.exercises
-        ],
+        "exercises": logged_exercises,
         "created_at": utcnow(),
     }
     total_volume, total_sets = _calc_session_volume(session)
     session["total_volume"] = total_volume
     session["total_sets"] = total_sets
+    if weight_kg > 0:
+        calorie_estimate = calculate_session_calories(session["exercises"], weight_kg)
+        session["estimated_calories"] = calorie_estimate["estimated_calories"]
+        session["exercise_calories"] = calorie_estimate["exercise_calories"]
+        for index, exercise_calories in enumerate(session["exercise_calories"]):
+            session["exercises"][index]["estimated_calories"] = exercise_calories["estimated_calories"]
+            session["exercises"][index]["estimated_duration_minutes"] = exercise_calories["estimated_duration_minutes"]
     await db.workout_sessions.insert_one(dict(session))
 
     # Update streak after logging
