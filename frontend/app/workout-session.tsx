@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Modal, FlatList } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, Modal, FlatList, Linking } from "react-native";
 import { useRouter } from "expo-router";
-import { Card } from "../components/ui";
+import { Card, Disclaimer } from "../components/ui";
 import { Button } from "../components/Button";
 import { Input } from "../components/Input";
 import { COLORS } from "../lib/constants";
@@ -44,6 +44,15 @@ const formatExerciseCalories = (exercise: ExercisePick, weightKg: number | null)
   const calories = estimateExerciseCalories(exercise, weightKg);
   return calories == null ? "" : ` - ${calories} kcal est.`;
 };
+
+const estimateWorkoutCalories = (exercises: ExercisePick[], weightKg: number | null) => {
+  if (!weightKg || weightKg <= 0) return null;
+  return roundOne(exercises.reduce((total, exercise) => {
+    return total + (estimateExerciseCalories(exercise, weightKg) || 0);
+  }, 0));
+};
+
+const MET_PAPER_URL = "https://doi.org/10.1249/MSS.0b013e31821ece12";
 
 export default function WorkoutSession() {
   const router = useRouter();
@@ -142,6 +151,7 @@ export default function WorkoutSession() {
     !search || e.name.toLowerCase().includes(search.toLowerCase()) ||
     e.primary_muscle_group.toLowerCase().includes(search.toLowerCase())
   );
+  const totalCalories = estimateWorkoutCalories(exercises, weightKg);
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -186,6 +196,24 @@ export default function WorkoutSession() {
         ))}
 
         <Button title="+ Add Exercise" variant="outline" onPress={() => setPickerOpen(true)} testID="add-exercise-btn" />
+
+        {exercises.length > 0 && totalCalories != null ? (
+          <Card style={{ marginTop: 12 }} testID="session-calorie-summary">
+            <Text style={styles.summaryLabel}>ESTIMATED BURN</Text>
+            <Text style={styles.summaryValue}>{totalCalories} kcal</Text>
+          </Card>
+        ) : null}
+
+        {exercises.length > 0 ? (
+          <View style={{ marginTop: 12 }}>
+            <Disclaimer testID="session-calorie-disclaimer">
+              Calorie estimates are approximate and use MET values from the Compendium of Physical Activities (Ainsworth et al., 2011). They are not medical advice.{" "}
+              <Text style={styles.disclaimerLink} onPress={() => Linking.openURL(MET_PAPER_URL)}>
+                Read the paper
+              </Text>
+            </Disclaimer>
+          </View>
+        ) : null}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <View style={{ height: 16 }} />
@@ -255,6 +283,9 @@ const styles = StyleSheet.create({
   setHead: { color: COLORS.text_secondary, fontSize: 10, letterSpacing: 1.5, fontWeight: "700", flex: 1, textAlign: "center" },
   setRow: { flexDirection: "row", alignItems: "center", marginVertical: 4 },
   setNum: { color: "#fff", fontWeight: "700", flex: 0.5, textAlign: "center" },
+  summaryLabel: { color: COLORS.text_secondary, fontSize: 11, letterSpacing: 2, fontWeight: "700" },
+  summaryValue: { color: COLORS.primary_workout, fontSize: 28, fontWeight: "900", marginTop: 4 },
+  disclaimerLink: { color: COLORS.text_primary, fontWeight: "800", textDecorationLine: "underline" },
   error: { color: COLORS.danger, marginTop: 12 },
   modalBg: { flex: 1, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "flex-end" },
   modalSheet: { backgroundColor: COLORS.surface, padding: 20, height: "80%", borderTopLeftRadius: 16, borderTopRightRadius: 16 },

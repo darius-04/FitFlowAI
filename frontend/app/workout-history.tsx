@@ -43,7 +43,8 @@ export default function WorkoutHistory() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.h3}>{new Date(s.date).toDateString()}</Text>
                 <Text style={styles.subtle}>
-                  {s.exercises.length} ex · {s.total_sets || 0} sets · vol {Math.round(s.total_volume || 0)}
+                  {s.exercises.length} ex - {s.total_sets || 0} sets - vol {Math.round(s.total_volume || 0)}
+                  {s.estimated_calories ? ` - ${s.estimated_calories} kcal` : ""}
                 </Text>
                 {s.notes ? <Text style={styles.notes}>{s.notes}</Text> : null}
               </View>
@@ -58,10 +59,13 @@ export default function WorkoutHistory() {
                 return (
                   <View key={ex.id} style={styles.exBlock}>
                     <Text style={styles.exName}>{ex.name}</Text>
-                    <Text style={styles.subtle}>{ex.primary_muscle_group} · vol {Math.round(exVol)}</Text>
+                    <Text style={styles.subtle}>
+                      {ex.primary_muscle_group} - vol {Math.round(exVol)}
+                      {ex.estimated_calories ? ` - ${ex.estimated_calories} kcal` : ""}
+                    </Text>
                     {ex.sets.map((st: any, j: number) => (
                       <Text key={j} style={styles.setLine}>
-                        Set {st.set_number || j + 1}: {st.reps} reps × {st.weight} kg{st.rpe ? ` @ RPE ${st.rpe}` : ""}
+                        Set {st.set_number || j + 1}: {st.reps} reps x {st.weight} kg{st.rpe ? ` @ RPE ${st.rpe}` : ""}
                       </Text>
                     ))}
                   </View>
