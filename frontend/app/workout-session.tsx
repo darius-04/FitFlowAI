@@ -14,7 +14,35 @@ type ExercisePick = {
   name: string;
   primary_muscle_group: string;
   secondary_muscle_groups: string[];
+  met_value: number;
+  met_code?: string | null;
+  met_category?: string | null;
+  estimated_kcal_per_set?: number | null;
   sets: SetRow[];
+};
+
+const SECONDS_PER_REP = 3;
+const REST_BETWEEN_SETS_SEC = 60;
+
+const roundOne = (value: number) => Math.round(value * 10) / 10;
+
+const parsePositive = (value: string | number | null | undefined) => {
+  const parsed = typeof value === "number" ? value : parseFloat(value || "0");
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+};
+
+const estimateExerciseCalories = (exercise: ExercisePick, weightKg: number | null) => {
+  if (!weightKg || weightKg <= 0) return null;
+  const durationMinutes = exercise.sets.reduce((total, set) => {
+    const reps = parsePositive(set.reps);
+    return total + ((reps * SECONDS_PER_REP) + REST_BETWEEN_SETS_SEC) / 60;
+  }, 0);
+  return roundOne(((exercise.met_value || 3.5) * 3.5 * weightKg * durationMinutes) / 200);
+};
+
+const formatExerciseCalories = (exercise: ExercisePick, weightKg: number | null) => {
+  const calories = estimateExerciseCalories(exercise, weightKg);
+  return calories == null ? "" : ` - ${calories} kcal est.`;
 };
 
 export default function WorkoutSession() {
@@ -23,12 +51,26 @@ export default function WorkoutSession() {
   const [notes, setNotes] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allExercises, setAllExercises] = useState<any[]>([]);
+  const [weightKg, setWeightKg] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<any[]>("/exercises").then(setAllExercises).catch(() => {});
+    const load = async () => {
+      try {
+        const profile = await api.get<{ weight: number }>("/profile");
+        const weight = Number(profile.weight);
+        const hasWeight = Number.isFinite(weight) && weight > 0;
+        setWeightKg(hasWeight ? weight : null);
+        const query = hasWeight ? `?weight_kg=${weight}` : "";
+        const items = await api.get<any[]>(`/exercises${query}`);
+        setAllExercises(items);
+      } catch {
+        api.get<any[]>("/exercises").then(setAllExercises).catch(() => {});
+      }
+    };
+    load();
   }, []);
 
   const addExercise = (ex: any) => {
@@ -39,6 +81,10 @@ export default function WorkoutSession() {
         name: ex.name,
         primary_muscle_group: ex.primary_muscle_group,
         secondary_muscle_groups: ex.secondary_muscle_groups || [],
+        met_value: ex.met_value || 3.5,
+        met_code: ex.met_code,
+        met_category: ex.met_category,
+        estimated_kcal_per_set: ex.estimated_kcal_per_set,
         sets: [{ reps: "8", weight: "20", rpe: "" }],
       },
     ]);
@@ -107,7 +153,9 @@ export default function WorkoutSession() {
             <View style={styles.rowBetween}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.exName}>{ex.name}</Text>
-                <Text style={styles.subtle}>{ex.primary_muscle_group}</Text>
+                <Text style={styles.subtle}>
+                  {ex.primary_muscle_group}{formatExerciseCalories(ex, weightKg)}
+                </Text>
               </View>
               <TouchableOpacity onPress={() => removeExercise(i)} testID={`del-ex-${i}`}>
                 <Trash2 color={COLORS.danger} size={18} />
@@ -161,7 +209,10 @@ export default function WorkoutSession() {
               renderItem={({ item }) => (
                 <TouchableOpacity onPress={() => addExercise(item)} style={styles.pickerItem} testID={`pick-${item.id}`}>
                   <Text style={styles.exName}>{item.name}</Text>
-                  <Text style={styles.subtle}>{item.primary_muscle_group} · {item.equipment}</Text>
+                  <Text style={styles.subtle}>
+                    {item.primary_muscle_group} - {item.equipment}
+                    {item.estimated_kcal_per_set ? ` - ~${item.estimated_kcal_per_set} kcal/set` : ""}
+                  </Text>
                 </TouchableOpacity>
               )}
               ListEmptyComponent={
