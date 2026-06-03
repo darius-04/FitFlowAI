@@ -1,7 +1,7 @@
 """Seed exercise database."""
 from typing import List, Dict
 
-EXERCISES: List[Dict] = [
+BASE_EXERCISES: List[Dict] = [
     # Chest
     {"name": "Bench Press", "primary_muscle_group": "chest", "secondary_muscle_groups": ["triceps", "shoulders"], "equipment": "barbell", "difficulty": "intermediate"},
     {"name": "Incline Dumbbell Press", "primary_muscle_group": "chest", "secondary_muscle_groups": ["shoulders", "triceps"], "equipment": "dumbbell", "difficulty": "intermediate"},
@@ -48,3 +48,58 @@ EXERCISES: List[Dict] = [
     {"name": "Cable Crunch", "primary_muscle_group": "core", "secondary_muscle_groups": [], "equipment": "cable", "difficulty": "beginner"},
     {"name": "Russian Twist", "primary_muscle_group": "core", "secondary_muscle_groups": [], "equipment": "bodyweight", "difficulty": "beginner"},
 ]
+
+
+MET_REFERENCE = {
+    "paper": "Ainsworth BE, Haskell WL, Herrmann SD, et al. 2011 Compendium of Physical Activities: A Second Update of Codes and MET Intensities.",
+    "doi": "10.1249/MSS.0b013e31821ece12",
+    "url": "https://doi.org/10.1249/MSS.0b013e31821ece12",
+}
+
+MET_CATEGORIES: Dict[str, Dict] = {
+    "vigorous_resistance": {
+        "met_code": "02050",
+        "met_value": 6.0,
+        "met_category": "Resistance training, power lifting or body building, vigorous effort",
+    },
+    "squats_deadlift": {
+        "met_code": "02052",
+        "met_value": 5.0,
+        "met_category": "Resistance training, squats, deadlift, slow or explosive effort",
+    },
+    "varied_resistance": {
+        "met_code": "02054",
+        "met_value": 3.5,
+        "met_category": "Resistance training, multiple exercises, 8-15 reps at varied resistance",
+    },
+    "bodyweight": {
+        "met_code": "02056",
+        "met_value": 3.0,
+        "met_category": "Body weight resistance exercises, general",
+    },
+}
+
+EXERCISE_MET_CATEGORY = {
+    "Bench Press": "vigorous_resistance",
+    "Barbell Row": "vigorous_resistance",
+    "Overhead Press": "vigorous_resistance",
+    "Close-Grip Bench Press": "vigorous_resistance",
+    "Squat": "squats_deadlift",
+    "Romanian Deadlift": "squats_deadlift",
+    "Deadlift": "squats_deadlift",
+    "Leg Press": "squats_deadlift",
+    "Lunges": "squats_deadlift",
+    "Push-up": "bodyweight",
+    "Pull-up": "bodyweight",
+    "Plank": "bodyweight",
+    "Hanging Leg Raise": "bodyweight",
+    "Russian Twist": "bodyweight",
+}
+
+
+def with_met_data(exercise: Dict) -> Dict:
+    category_key = EXERCISE_MET_CATEGORY.get(exercise["name"], "varied_resistance")
+    return {**exercise, **MET_CATEGORIES[category_key]}
+
+
+EXERCISES: List[Dict] = [with_met_data(exercise) for exercise in BASE_EXERCISES]
